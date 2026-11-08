@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from 'react'
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
-import { getCurrentUserProfile } from './services/authService'
-
-import Navbar from './components/Navbar'
+import Navbar from './components/layout/Navbar'
+import SiteFooter from './components/layout/SiteFooter'
+import ProtectedRoute from './components/shared/ProtectedRoute'
+import ScrollToTop from './components/layout/ScrollToTop'
+import { FullPageLoader } from './components/ui/PageState'
+import useCurrentUser from './hooks/useCurrentUser'
 import Home from './pages/Home'
 import Explore from './pages/Explore'
 import ActivityDetails from './pages/ActivityDetails'
@@ -13,43 +15,30 @@ import Login from './pages/Login'
 import Register from './pages/Register'
 
 export default function App() {
-  const [currentUser, setCurrentUser] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const { currentUser, loading, refetch: fetchUser } = useCurrentUser()
 
-  const fetchUser = async () => {
-    try {
-      const user = await getCurrentUserProfile()
-      setCurrentUser(user)
-    } catch (error) {
-      console.error('خطأ في جلب المستخدم الحالي:', error)
-      setCurrentUser(null)
-    } finally {
-      setLoading(false)
-    }
-  }
+  if (loading) return <FullPageLoader label="جاري تحميل رِفقة..." />
 
-  useEffect(() => {
-    fetchUser()
-  }, [])
-
-  if (loading) {
-    return <div className="min-h-screen flex items-center justify-center text-gray-500">جاري تحميل التطبيق...</div>
-  }
+  const protect = (element) => <ProtectedRoute currentUser={currentUser}>{element}</ProtectedRoute>
 
   return (
     <Router>
-      <div className="min-h-screen bg-gray-50 font-sans text-gray-900" dir="rtl">
+      <ScrollToTop />
+      <div className="min-h-screen bg-background text-foreground" dir="rtl">
         <Navbar currentUser={currentUser} onLogout={fetchUser} />
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/explore" element={<Explore currentUser={currentUser} />} />
-          <Route path="/activities/:id" element={<ActivityDetails currentUser={currentUser} />} />
-          <Route path="/create-activity" element={<CreateActivity currentUser={currentUser} />} />
-          <Route path="/my-activities" element={<MyActivities currentUser={currentUser} />} />
-          <Route path="/profile" element={<Profile currentUser={currentUser} onProfileUpdate={fetchUser} />} />
-          <Route path="/login" element={<Login onLoginSuccess={fetchUser} />} />
-          <Route path="/register" element={<Register onRegisterSuccess={fetchUser} />} />
-        </Routes>
+        <main className="min-h-[70vh] pb-24 md:pb-0">
+          <Routes>
+            <Route path="/" element={<Home currentUser={currentUser} />} />
+            <Route path="/explore" element={<Explore currentUser={currentUser} />} />
+            <Route path="/activities/:id" element={protect(<ActivityDetails currentUser={currentUser} />)} />
+            <Route path="/create-activity" element={protect(<CreateActivity currentUser={currentUser} />)} />
+            <Route path="/my-activities" element={protect(<MyActivities currentUser={currentUser} />)} />
+            <Route path="/profile" element={protect(<Profile currentUser={currentUser} onProfileUpdate={fetchUser} />)} />
+            <Route path="/login" element={<Login onLoginSuccess={fetchUser} />} />
+            <Route path="/register" element={<Register onRegisterSuccess={fetchUser} />} />
+          </Routes>
+        </main>
+        <SiteFooter />
       </div>
     </Router>
   )
