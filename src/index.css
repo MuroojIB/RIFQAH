@@ -1,111 +1,180 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+/* Local typography definitions */
+@font-face {
+  font-family: 'Thmanyah';
+  src: url('/fonts/thmanyahserifdisplay-Regular.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Thmanyah';
+  src: url('/fonts/thmanyahserifdisplay-Bold.otf') format('opentype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'IBMPlexArabic';
+  src: url('/fonts/IBMPlexSansArabic-Regular.ttf') format('truetype');
+  font-weight: 400 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@theme {
+  --font-sans: 'Thmanyah', system-ui, sans-serif;
+  --font-display: 'Thmanyah', system-ui, sans-serif;
+  --font-mono: 'IBMPlexArabic', monospace;
+
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+
+  --color-cat-sports: var(--cat-sports);
+  --color-cat-arts: var(--cat-arts);
+  --color-cat-learning: var(--cat-learning);
+  --color-cat-games: var(--cat-games);
+  --color-cat-adventure: var(--cat-adventure);
+  --color-cat-social: var(--cat-social);
+
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+
+  --animate-marquee: marquee 40s linear infinite;
+  @keyframes marquee {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(50%);
+    }
+  }
+}
+
 :root {
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
-  --accent: #aa3bff;
-  --accent-bg: rgba(170, 59, 255, 0.1);
-  --accent-border: rgba(170, 59, 255, 0.5);
-  --social-bg: rgba(244, 243, 236, 0.5);
-  --shadow:
-    rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
+  color-scheme: light;
 
-  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --mono: ui-monospace, Consolas, monospace;
+  /* Palette - descriptive color tokens */
+  --olive-green: oklch(0.44 0.09 162);
+  --olive-green-light: oklch(0.985 0.01 160);
+  --warm-beige: oklch(0.972 0.014 85);
+  --dark-brown: oklch(0.22 0.01 70);
+  --soft-cream: oklch(0.995 0.005 85);
+  --sand: oklch(0.93 0.02 85);
+  --warm-gray: oklch(0.94 0.016 85);
+  --muted-brown: oklch(0.47 0.015 70);
+  --sage-green: oklch(0.9 0.05 162);
+  --deep-sage: oklch(0.3 0.07 162);
+  --warm-red: oklch(0.55 0.19 27);
+  --warm-border: oklch(0.88 0.02 80);
+  --warm-input: oklch(0.86 0.02 80);
 
-  font: 18px/145% var(--sans);
-  letter-spacing: 0.18px;
-  color-scheme: light dark;
-  color: var(--text);
-  background: var(--bg);
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  /* Category colors */
+  --leaf-green: oklch(0.87 0.07 130);
+  --blush-pink: oklch(0.87 0.06 355);
+  --golden-yellow: oklch(0.9 0.1 90);
+  --sky-blue: oklch(0.87 0.05 240);
+  --warm-orange: oklch(0.85 0.08 55);
+  --soft-purple: oklch(0.86 0.05 300);
 
-  @media (max-width: 1024px) {
-    font-size: 16px;
+  /* Semantic UI mappings */
+  --background: var(--warm-beige);
+  --foreground: var(--dark-brown);
+  --card: var(--soft-cream);
+  --card-foreground: var(--dark-brown);
+  --popover: var(--soft-cream);
+  --popover-foreground: var(--dark-brown);
+  --primary: var(--olive-green);
+  --primary-foreground: var(--olive-green-light);
+  --secondary: var(--sand);
+  --secondary-foreground: var(--dark-brown);
+  --muted: var(--warm-gray);
+  --muted-foreground: var(--muted-brown);
+  --accent: var(--sage-green);
+  --accent-foreground: var(--deep-sage);
+  --destructive: var(--warm-red);
+  --border: var(--warm-border);
+  --input: var(--warm-input);
+  --ring: var(--olive-green);
+  --radius: 1rem;
+
+  /* Category tokens */
+  --cat-sports: var(--leaf-green);
+  --cat-arts: var(--blush-pink);
+  --cat-learning: var(--golden-yellow);
+  --cat-games: var(--sky-blue);
+  --cat-adventure: var(--warm-orange);
+  --cat-social: var(--soft-purple);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    @apply bg-background;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+  }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-feature-settings: 'kern' 1, 'liga' 1, 'calt' 1, 'mark' 1, 'mkmk' 1;
+  }
+  h1,
+  h2,
+  h3 {
+    @apply font-display font-bold text-balance;
+    font-feature-settings: 'kern' 1, 'liga' 1, 'calt' 1, 'salt' 1, 'dlig' 1, 'mark' 1, 'mkmk' 1;
   }
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --bg: #16171d;
-    --border: #2e303a;
-    --code-bg: #1f2028;
-    --accent: #c084fc;
-    --accent-bg: rgba(192, 132, 252, 0.15);
-    --accent-border: rgba(192, 132, 252, 0.5);
-    --social-bg: rgba(47, 48, 58, 0.5);
-    --shadow:
-      rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
+/* Thmanyah font stylistic utilities (Figma OpenType Features) */
+@utility font-stretched {
+  font-feature-settings: 'salt' 1, 'swsh' 1, 'dlig' 1, 'ss01' 1, 'ss03' 1, 'ss04' 1, 'ss05' 1, 'ss06' 1, 'ss07' 1;
+}
+
+@utility font-alternates {
+  font-feature-settings: 'salt' 1, 'dlig' 1;
+}
+
+@utility font-tashkeel {
+  font-feature-settings: 'mark' 1, 'mkmk' 1;
+}
+
+@utility bg-grid-paper {
+  background-image:
+    linear-gradient(to right, oklch(0.22 0.01 70 / 0.06) 1px, transparent 1px),
+    linear-gradient(to bottom, oklch(0.22 0.01 70 / 0.06) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-marquee {
+    animation: none;
   }
-
-  #social .button-icon {
-    filter: invert(1) brightness(2);
-  }
-}
-
-body {
-  margin: 0;
-}
-
-#root {
-  width: 1126px;
-  max-width: 100%;
-  margin: 0 auto;
-  text-align: center;
-  border-inline: 1px solid var(--border);
-  min-height: 100svh;
-  display: flex;
-  flex-direction: column;
-  box-sizing: border-box;
-}
-
-h1,
-h2 {
-  font-family: var(--heading);
-  font-weight: 500;
-  color: var(--text-h);
-}
-
-h1 {
-  font-size: 56px;
-  letter-spacing: -1.68px;
-  margin: 32px 0;
-  @media (max-width: 1024px) {
-    font-size: 36px;
-    margin: 20px 0;
-  }
-}
-h2 {
-  font-size: 24px;
-  line-height: 118%;
-  letter-spacing: -0.24px;
-  margin: 0 0 8px;
-  @media (max-width: 1024px) {
-    font-size: 20px;
-  }
-}
-p {
-  margin: 0;
-}
-
-code,
-.counter {
-  font-family: var(--mono);
-  display: inline-flex;
-  border-radius: 4px;
-  color: var(--text-h);
-}
-
-code {
-  font-size: 15px;
-  line-height: 135%;
-  padding: 4px 8px;
-  background: var(--code-bg);
 }
