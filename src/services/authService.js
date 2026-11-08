@@ -7,27 +7,39 @@ export const signUpUser = async ({
   interests,
   gender,
 }) => {
+  // نمرّر بيانات الملف الشخصي كـ metadata: trigger في قاعدة البيانات
+  // (supabase/02_security_rls.sql) ينشئ صف users تلقائياً، ويعمل حتى مع
+  // تفعيل تأكيد البريد الإلكتروني حيث لا توجد جلسة بعد التسجيل.
   const { data: authData, error: authError } = await supabase.auth.signUp({
     email,
     password,
+    options: { data: { name, gender, interests } },
   });
 
   if (authError) throw authError;
 
+  // مع تفعيل تأكيد البريد، إعادة التسجيل ببريد موجود لا تُرجع خطأ بل مستخدماً
+  // وهمياً بلا identities (حماية من تخمين البريدات). نحوّله لخطأ مفهوم.
+  if (authData.user && authData.user.identities?.length === 0) {
+    const exists = new Error("User already registered");
+    exists.code = "user_already_exists";
+    throw exists;
+  }
+
   const userId = authData.user?.id;
 
   if (userId) {
-    const { error: profileError } = await supabase.from("users").insert([
-      {
-        id: userId,
-        name,
-        email,
-        interests,
-        gender,
-      },
-    ]);
+    // احتياط: لو لم يُشغَّل الـ trigger بعد، ننشئ الصف من هنا.
+    // ignoreDuplicates = "ON CONFLICT DO NOTHING" فلا يعدّل صفاً أنشأه الـ trigger.
+    const { error: profileError } = await supabase
+      .from("users")
+      .upsert([{ id: userId, name, email, interests, gender }], {
+        onConflict: "id",
+        ignoreDuplicates: true,
+      });
 
-    if (profileError) throw profileError;
+    // 42501 = رفض صلاحية: يحدث عند تفعيل تأكيد البريد (لا جلسة) والـ trigger أنشأ الصف أصلاً
+    if (profileError && profileError.code !== "42501") throw profileError;
   }
 
   return authData;
@@ -57,9 +69,11 @@ export const getCurrentUserProfile = async () => {
 
   const userId = session.user.id;
 
+  // أعمدة محددة (لا select("*")): عمود email مخفي عن الـ API بصلاحيات الأعمدة،
+  // والبريد يأتي من جلسة المصادقة نفسها (session.user.email).
   const { data: userProfile, error: profileError } = await supabase
     .from("users")
-    .select("*")
+    .select("id, name, gender, interests, created_at")
     .eq("id", userId)
     .single();
 
@@ -73,7 +87,7 @@ export const updateUserProfile = async (userId, { name, interests }) => {
     .from("users")
     .update({ name, interests })
     .eq("id", userId)
-    .select();
+    .select("id, name, interests");
 
   if (error) throw error;
   return data;
