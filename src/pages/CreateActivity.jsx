@@ -1,167 +1,165 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { PlusCircle, Calendar, MapPin, Users, FileText, Tag } from 'lucide-react'
+import { ChevronDown, Minus, Plus, Send } from 'lucide-react'
+import { CATEGORIES, categoryLabelFromId, localDateTime, toInstant } from '@/utils/activities'
+import { nowLocalString, todayISO } from '@/utils/format'
+import { fieldClass, pill } from '@/utils/ui'
+import { cn } from '@/utils/cn'
 import { createActivity } from '../services/activityService'
+import Field from '../components/ui/Field'
 
 export default function CreateActivity({ currentUser }) {
   const navigate = useNavigate()
-  const [loading, setLoading] = useState(false)
-  const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    category: 'رياضة',
-    location: '',
-    date_time: '',
-    max_members: 5
-  })
+  const [maxMembers, setMaxMembers] = useState(6)
+  const [errors, setErrors] = useState({})
+  const [serverError, setServerError] = useState('')
+  const [submitting, setSubmitting] = useState(false)
 
-  const categories = ['رياضة', 'فن وثقافة', 'تعليم وتعلم', 'ألعاب وترفيه', 'مغامرات', 'أنشطة اجتماعية']
-
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value })
-  }
-
-  const handleSubmit = async (e) => {
+  const onSubmit = async (e) => {
     e.preventDefault()
-    if (!currentUser) {
-      alert('يجب تسجيل الدخول لإنشاء نشاط.')
-      navigate('/login')
+    const form = e.currentTarget
+    const data = new FormData(form)
+    const value = (k) => String(data.get(k) ?? '').trim()
+
+    const next = {}
+    if (value('title').length < 4) next.title = 'اكتب عنواناً من ٤ أحرف على الأقل'
+    if (value('description').length < 10) next.description = 'أضف وصفاً قصيراً (١٠ أحرف على الأقل)'
+    if (!value('category')) next.category = 'اختر فئة النشاط'
+    if (!value('date')) next.date = 'حدد التاريخ'
+    if (!value('time')) next.time = 'حدد الوقت'
+    if (value('date') && value('time') && localDateTime(value('date'), value('time')) <= nowLocalString()) {
+      next.time = 'اختر موعداً في المستقبل'
+    }
+    if (!value('location')) next.location = 'أضف الموقع'
+
+    setErrors(next)
+    setServerError('')
+    if (Object.keys(next).length) {
+      form.querySelector(`[name="${Object.keys(next)[0]}"]`)?.focus()
       return
     }
 
+    setSubmitting(true)
     try {
-      setLoading(true)
-      await createActivity({
-        ...formData,
+      const created = await createActivity({
+        title: value('title'),
+        description: value('description'),
+        category: categoryLabelFromId(value('category')),
+        location: value('location'),
+        date_time: toInstant(value('date'), value('time')),
+        max_members: maxMembers,
         creator_id: currentUser.id,
-        status: 'open'
+        status: 'open',
       })
-      alert('تم نشر النشاط بنجاح! 🎉')
-      navigate('/explore')
+      navigate(`/activities/${created.id}`)
     } catch (error) {
-      console.error('خطأ في إنشاء النشاط:', error)
-      alert('حدث خطأ أثناء نشر النشاط، تأكد من البيانات.')
-    } finally {
-      setLoading(false)
+      console.error('Error creating activity:', error)
+      setServerError('تعذّر نشر النشاط، تأكد من البيانات وحاول مرة أخرى')
+      setSubmitting(false)
     }
   }
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-10">
-      <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-8">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="bg-purple-100 p-3 rounded-2xl text-purple-600">
-            <PlusCircle size={28} />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">إنشاء نشاط جديد</h1>
-            <p className="text-gray-500 text-sm">شارك اهتمامك وادعُ الآخرين للانضمام إليك برفقة.</p>
-          </div>
+    <div className="bg-grid-paper">
+      <div className="mx-auto max-w-3xl px-4 py-10 md:px-6 md:py-14">
+        <div className="mb-8 flex flex-col gap-2">
+          <h1 className="text-3xl font-bold md:text-5xl">أنشئ نشاطاً جديداً</h1>
+          <p className="text-muted-foreground">شاركنا التفاصيل، وسنساعدك في إيجاد رفقتك</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">عنوان النشاط</label>
-            <div className="relative">
-              <FileText className="absolute right-3 top-3.5 text-gray-400" size={18} />
-              <input
-                type="text"
-                name="title"
-                required
-                placeholder="مثلاً: جولة تصوير في حديقة الملك عبد الله"
-                value={formData.title}
-                onChange={handleChange}
-                className="w-full pr-10 pl-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
+        <form onSubmit={onSubmit} noValidate className="flex flex-col gap-6 rounded-[2rem] border border-border bg-card p-5 shadow-sm md:p-8">
+          <Field label="عنوان النشاط" name="title" error={errors.title}>
+            {(props) => <input {...props} type="text" maxLength={80} placeholder="مثلاً: جلسة قهوة وتعارف" className={fieldClass} />}
+          </Field>
+
+          <Field label="الوصف" name="description" error={errors.description}>
+            {(props) => (
+              <textarea
+                {...props}
+                rows={4}
+                maxLength={600}
+                placeholder="ماذا ستفعلون؟ ولمن يناسب هذا النشاط؟"
+                className={cn(fieldClass, 'h-auto resize-y py-3 leading-relaxed')}
               />
-            </div>
+            )}
+          </Field>
+
+          <Field label="الفئة" name="category" error={errors.category}>
+            {(props) => (
+              <div className="relative">
+                <select {...props} defaultValue="" className={cn(fieldClass, 'appearance-none pl-10')}>
+                  <option value="" disabled>
+                    اختر الفئة
+                  </option>
+                  {CATEGORIES.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.label}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+              </div>
+            )}
+          </Field>
+
+          <div className="grid gap-6 sm:grid-cols-2">
+            <Field label="التاريخ" name="date" error={errors.date}>
+              {(props) => <input {...props} type="date" min={todayISO()} className={cn(fieldClass, 'text-right')} />}
+            </Field>
+            <Field label="الوقت" name="time" error={errors.time}>
+              {(props) => <input {...props} type="time" className={cn(fieldClass, 'text-right')} />}
+            </Field>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">التصنيف</label>
-            <div className="relative">
-              <Tag className="absolute right-3 top-3.5 text-gray-400" size={18} />
-              <select
-                name="category"
-                value={formData.category}
-                onChange={handleChange}
-                className="w-full pr-10 pl-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
+          <Field label="الموقع أو الرابط" name="location" error={errors.location}>
+            {(props) => <input {...props} type="text" placeholder="اسم المكان والمدينة، أو رابط موقع" className={fieldClass} />}
+          </Field>
+
+          <div className="flex flex-col gap-2">
+            <label htmlFor="maxMembers" className="text-sm font-semibold">
+              الحد الأقصى للمشاركين
+            </label>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setMaxMembers((n) => Math.max(2, n - 1))}
+                aria-label="إنقاص العدد"
+                className="flex size-12 items-center justify-center rounded-2xl border border-input bg-card hover:bg-muted"
               >
-                {categories.map((cat) => (
-                  <option key={cat} value={cat}>{cat}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">وصف النشاط</label>
-            <textarea
-              name="description"
-              rows="4"
-              required
-              placeholder="اكتب تفاصيل أكثر عن النشاط وماذا سيقوم المشاركون..."
-              value={formData.description}
-              onChange={handleChange}
-              className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
-            ></textarea>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">موعد النشاط</label>
-              <div className="relative">
-                <Calendar className="absolute right-3 top-3.5 text-gray-400" size={18} />
-                <input
-                  type="datetime-local"
-                  name="date_time"
-                  required
-                  value={formData.date_time}
-                  onChange={handleChange}
-                  className="w-full pr-10 pl-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">الحد الأقصى للمشاركين</label>
-              <div className="relative">
-                <Users className="absolute right-3 top-3.5 text-gray-400" size={18} />
-                <input
-                  type="number"
-                  name="max_members"
-                  min="2"
-                  max="50"
-                  required
-                  value={formData.max_members}
-                  onChange={handleChange}
-                  className="w-full pr-10 pl-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
-                />
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">الموقع أو الرابط</label>
-            <div className="relative">
-              <MapPin className="absolute right-3 top-3.5 text-gray-400" size={18} />
+                <Minus className="size-4" aria-hidden="true" />
+              </button>
               <input
-                type="text"
-                name="location"
-                required
-                placeholder="مثلاً: الرياض، حي المداين أو رابط موقع خارجي"
-                value={formData.location}
-                onChange={handleChange}
-                className="w-full pr-10 pl-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
+                id="maxMembers"
+                name="maxMembers"
+                type="number"
+                inputMode="numeric"
+                min={2}
+                max={50}
+                value={maxMembers}
+                onChange={(e) => setMaxMembers(Math.min(50, Math.max(2, Number(e.target.value) || 2)))}
+                className={cn(fieldClass, 'w-24 text-center font-display text-lg font-semibold')}
               />
+              <button
+                type="button"
+                onClick={() => setMaxMembers((n) => Math.min(50, n + 1))}
+                aria-label="زيادة العدد"
+                className="flex size-12 items-center justify-center rounded-2xl border border-input bg-card hover:bg-muted"
+              >
+                <Plus className="size-4" aria-hidden="true" />
+              </button>
+              <span className="text-sm text-muted-foreground">من ٢ إلى ٥٠ شخصاً</span>
             </div>
           </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-purple-600 hover:bg-purple-700 text-white font-medium py-3.5 rounded-xl transition-colors shadow-sm disabled:opacity-50"
-          >
-            {loading ? 'جاري النشر...' : 'نشر النشاط'}
+          {serverError && (
+            <p role="alert" className="rounded-2xl bg-destructive/10 px-4 py-3 text-sm font-medium text-destructive">
+              {serverError}
+            </p>
+          )}
+
+          <button type="submit" disabled={submitting} className={cn(pill({ size: 'lg' }), 'mt-2 w-full sm:w-auto sm:self-start')}>
+            <Send aria-hidden="true" className="-scale-x-100" />
+            {submitting ? 'جاري النشر...' : 'نشر النشاط'}
           </button>
         </form>
       </div>

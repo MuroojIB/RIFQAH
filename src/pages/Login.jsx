@@ -1,85 +1,91 @@
-import React, { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
-import { Mail, Lock, LogIn } from 'lucide-react'
+import { useState } from 'react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { LogIn } from 'lucide-react'
+import { fieldClass, pill } from '@/utils/ui'
+import { cn } from '@/utils/cn'
+import { friendlyAuthError, validateLogin } from '@/utils/validation'
 import { signInUser } from '../services/authService'
+import AuthShell from '../components/shared/AuthShell'
+import Field from '../components/ui/Field'
+import PasswordInput from '../components/ui/PasswordInput'
 
 export default function Login({ onLoginSuccess }) {
   const navigate = useNavigate()
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
+  const location = useLocation()
+  const redirectTo = location.state?.from || '/explore'
+
+  const [form, setForm] = useState({ email: '', password: '' })
+  const [errors, setErrors] = useState({})
+  const [serverError, setServerError] = useState('')
   const [loading, setLoading] = useState(false)
+
+  const update = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }))
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    const next = validateLogin(form)
+    setErrors(next)
+    setServerError('')
+    if (Object.keys(next).length) return
+
     try {
       setLoading(true)
-      await signInUser({ email, password })
-      alert('تم تسجيل الدخول بنجاح! أهلاً بك في رِفقة 💜')
+      await signInUser({ email: form.email.trim(), password: form.password })
       if (onLoginSuccess) await onLoginSuccess()
-      navigate('/explore')
+      navigate(redirectTo, { replace: true })
     } catch (error) {
-      console.error('خطأ في تسجيل الدخول:', error)
-      alert('فشل تسجيل الدخول، تأكد من البريد وكلمة المرور.')
-    } finally {
+      console.error('Error signing in:', error)
+      setServerError(friendlyAuthError(error))
       setLoading(false)
     }
   }
 
   return (
-    <div className="max-w-md mx-auto px-4 py-16">
-      <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-8">
-        <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">تسجيل الدخول إلى رِفقة</h1>
-          <p className="text-gray-500 text-sm">كل تجربة أحلى برفقة.</p>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">البريد الإلكتروني</label>
-            <div className="relative">
-              <Mail className="absolute right-3 top-3.5 text-gray-400" size={18} />
-              <input
-                type="email"
-                required
-                placeholder="name@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full pr-10 pl-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">كلمة المرور</label>
-            <div className="relative">
-              <Lock className="absolute right-3 top-3.5 text-gray-400" size={18} />
-              <input
-                type="password"
-                required
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full pr-10 pl-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
-              />
-            </div>
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-purple-600 hover:bg-purple-700 text-white font-medium py-3.5 rounded-xl transition-colors shadow-sm flex items-center justify-center gap-2 disabled:opacity-50"
-          >
-            <LogIn size={18} /> {loading ? 'جاري الدخول...' : 'تسجيل الدخول'}
-          </button>
-        </form>
-
-        <p className="text-center text-sm text-gray-500 mt-6">
+    <AuthShell
+      title="أهلاً بعودتك"
+      subtitle="سجّل دخولك لتنضم إلى الأنشطة وتدير مساحتك"
+      footer={
+        <>
           ليس لديك حساب؟{' '}
-          <Link to="/register" className="text-purple-600 font-medium hover:underline">
+          <Link to="/register" state={location.state} className="font-semibold text-primary underline-offset-4 hover:underline">
             أنشئ حساباً جديداً
           </Link>
-        </p>
-      </div>
-    </div>
+        </>
+      }
+    >
+      <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-5">
+        <Field label="البريد الإلكتروني" name="email" error={errors.email}>
+          {(props) => (
+            <input
+              {...props}
+              type="email"
+              dir="ltr"
+              autoComplete="email"
+              placeholder="name@example.com"
+              value={form.email}
+              onChange={update('email')}
+              className={cn(fieldClass, 'text-right')}
+            />
+          )}
+        </Field>
+
+        <Field label="كلمة المرور" name="password" error={errors.password}>
+          {(props) => (
+            <PasswordInput {...props} autoComplete="current-password" placeholder="••••••••" value={form.password} onChange={update('password')} />
+          )}
+        </Field>
+
+        {serverError && (
+          <p role="alert" className="rounded-2xl bg-destructive/10 px-4 py-3 text-sm font-medium text-destructive">
+            {serverError}
+          </p>
+        )}
+
+        <button type="submit" disabled={loading} className={cn(pill({ size: 'lg' }), 'w-full')}>
+          <LogIn aria-hidden="true" className="-scale-x-100" />
+          {loading ? 'جاري الدخول...' : 'تسجيل الدخول'}
+        </button>
+      </form>
+    </AuthShell>
   )
 }
